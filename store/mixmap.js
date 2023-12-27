@@ -5,18 +5,37 @@ var eyros = require('eyros/2d')
 var createStorage = require('../storage')
 var centerViewbox = require('../lib/bbox').centerViewbox
 
+function supportedExtensions () {
+  return document.createElement("canvas").getContext("webgl").getSupportedExtensions().map(s => s.toLowerCase())
+}
+
+const desiredExtensions = [
+  'oes_element_index_uint',
+  'oes_texture_float',
+  'ext_float_blend',
+  'webgl_color_buffer_float',
+].map(s => s.toLowerCase())
+
+function cmpEqual (a, b) {
+  return a === b
+}
+
+function union (a, b, cmp) {
+  return a.filter((av) => {
+    return b.find((bv) => cmp(av, bv))
+  })
+}
+
+const extensions = union(supportedExtensions(), desiredExtensions, cmpEqual)
+
 module.exports = function (state, emitter) {
   state.mix = mixmap(regl, {
-    extensions: [
-      'oes_element_index_uint',
-      'oes_texture_float',
-      'ext_float_blend'
-    ]
+    extensions,
   })
   state.map = state.mix.create({
     viewbox: state.parameters.bbox,
     backgroundColor: [0.82, 0.85, 0.99, 1.0],
-    pickfb: { colorFormat: 'rgba', colorType: 'float32' }
+    pickfb: { colorFormat: 'rgba', colorType: 'float32' },
   })
 
   state.map.on('viewbox', function (viewbox) {
@@ -51,7 +70,19 @@ module.exports = function (state, emitter) {
   })
 
   function onReady () {
+    console.log('store:mixmap:onReady')
     state.storage = createStorage(state, getStorageEndpoint())
+    console.log('state.storage')
+    console.log(state.storage)
+    if (typeof state.storage.clear === 'function') {
+      console.log('clear mixmap data with: window._clearMixmapData')
+      window._clearMixmapData = () => {
+        state.storage.clear((error) => {
+          if (error) console.log(error)
+          console.log('cleared mixmap data')
+        })
+      }
+    }
 
     emitter.on('settings:storage:updated', updateStorageBackend)
     emitter.on('map:zoom:set', updateStorageBackend)

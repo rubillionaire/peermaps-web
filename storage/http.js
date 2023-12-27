@@ -15,6 +15,7 @@ module.exports = function (url, opts) {
   function wrappedGet (name, cb) {
     db.get(name, function (err, data) {
       if (!err) {
+        if (debug) console.log('cached', name, data)
         cb(null, data)
       } else {
         getData(name, function (err, data) {
@@ -30,11 +31,13 @@ module.exports = function (url, opts) {
 
   return {
     length: function f (name, cb) {
+      if (debug) console.log('length:', name)
       wrappedGet(name, function (err, data) {
         cb(err, err ? null : data.length)
       })
     },
     read: function f (name, offset, length, cb) {
+      if (debug) console.log('read:', url, name)
       wrappedGet(name, function (err, data) {
         if (err) {
           cb(err)
@@ -61,7 +64,11 @@ module.exports = function (url, opts) {
         queue = queue.filter(q => q.name !== name)
         if (cb) cb()
       })
-    }
+    },
+    clear: function (cb) {
+      if (debug) console.log('clear:db:', url)
+      db.clear(cb)
+    },
   }
 
   async function getData(name, cb) {

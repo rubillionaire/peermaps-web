@@ -1,5 +1,8 @@
 var app = require('choo')({ history: false })
 var html = require('choo/html')
+var TouchHandlers = require('./lib/touch-handlers.js')
+var mapDomainToRange = require('./lib/map-domain-to-range.js')
+var zoomToPosition = require('./lib/bbox').zoomToPosition
 var nextTick = process.nextTick
 
 app.use(require('./store/parameters.js'))
@@ -177,7 +180,55 @@ app.route('*', function (state, emit) {
       ${view.settings(state, emit)}
     </div>
     ${state.mix.render()}
-    ${state.map.render({ width: state.window.width, height: state.window.height })}
+    ${state.map.render({
+      width: state.window.width,
+      height: state.window.height,
+      attributes: Object.assign({}, TouchHandlers({
+        ontouchstart: function ({ touch0, doubleTapped }) {
+          if (!doubleTapped) return
+          // state.map.setZoom(state.map.getZoom() + 1)
+          var zoomTo = [
+            touch0[0]/state.map._size[0],
+            1-(touch0[1]/state.map._size[1]),
+          ]
+          var zoom = state.map.getZoom() + 1
+          var bbox = zoomToPosition(state.map.viewbox, zoomTo, Math.max(Math.min(zoom,21),1))
+          state.map.setViewbox(bbox)
+        },
+        ontouchmove: function ({ delta0, center, distanceDifference }) {
+          console.log({center})
+          if (center === undefined) {
+            // there is only one finger moving, so lets move the map
+            var aspect = state.map._size[0] / state.map._size[1]
+            state.map.move(
+              delta0[0] / state.map._size[0],
+              delta0[1] / state.map._size[1] / aspect
+            )
+          }
+          else {
+            // we have a distance difference, defining the distance
+            // between fingers, lets apply the change
+            console.log({ distanceDifference })
+            var smallerDimension = Math.min(state.map._size[0], state.map._size[1])
+            var zoomDelta = mapDomainToRange(
+              [-smallerDimension, smallerDimension],
+              [-3, 3],
+              distanceDifference || 0)
+            var zoomTo = [
+              center[0] / state.map._size[0],
+              1 - (center[1] / state.map._size[1]),
+            ]
+            var zoom = state.map.getZoom() + zoomDelta
+            console.log({zoomDelta})
+            console.log({zoomTo})
+            console.log({zoom})
+            var bbox = zoomToPosition(state.map.viewbox, zoomTo, Math.max(Math.min(zoom,21),1))
+            state.map.setViewbox(bbox)
+          }
+        },
+        preventDefault: true,
+      }))
+    })}
   </body>`
 
 

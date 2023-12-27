@@ -23,6 +23,7 @@ module.exports = function (STATE, URL) {
 
   function updateBackend (state, url) {
     var debug = state.parameters.debug
+    if (debug) console.log('updateBackend')
     if (backend) {
       var cached = cache[url]
       if (cached && cached === backend) {
@@ -57,11 +58,19 @@ module.exports = function (STATE, URL) {
       },
       read: function (offset, length, cb) {
         backend.read(name, offset, length, cb)
-      }
+      },
     }
   }
 
   storageFn.destroy = function (name, cb) { backend.destroy(name, cb) }
+  storageFn.clear = function (cb) {
+    if (typeof backend.clear === 'function') {
+      return backend.clear(cb)
+    }
+    else {
+      console.log('could not clear backend')
+    }
+  }
   storageFn.updateBackend = function (state, url) { updateBackend(state, url) }
 
   updateBackend(STATE, URL)

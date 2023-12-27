@@ -7,7 +7,7 @@ module.exports = function (state, emitter) {
     bbox: config.bbox,
     fonts: config.fonts,
     style: config.style,
-    debug: false
+    debug: true,
   }
   var qparams = new URLSearchParams(window.location.hash.replace(/^#/,''))
   var timeout = null
@@ -46,7 +46,7 @@ module.exports = function (state, emitter) {
       }, 500)
     }
   }
-  emitter.on('map:viewbox:updated', updateViewboxParams)
+  // emitter.on('map:viewbox:updated', updateViewboxParams)
 
   state.parameters = parameters
 }
